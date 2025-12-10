@@ -1,0 +1,48 @@
+# Documentation labels
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - 'README.md'
+      - '**/*.md'
+
+# CI/CD labels
+ci/cd:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+      - '.gitignore'
+      - '.gitattributes'
+
+# Configuration labels
+configuration:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.json'
+      - '*.ini'
+      - '*.conf'
+      - '*.config'
+
+# Scripts labels
+scripts:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'scripts/**'
+      - '*.sh'
+      - '*.bash'
+
+# Security labels
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/security.tf'
+      - '**/iam.tf'
+      - '**/policy.json'
+
+# Docker Images labels
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docker/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'

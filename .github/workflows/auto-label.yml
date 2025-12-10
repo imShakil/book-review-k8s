@@ -1,0 +1,149 @@
+name: Auto Label PR and Issues
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        
+      - name: Label based on file changes
+        if: github.event_name == 'pull_request'
+        uses: actions/labeler@v6
+        with:
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+      - name: Label PR based on title
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = context.payload.pull_request.title.toLowerCase();
+            const labels = [];
+
+            // PR type labels (conventional commits)
+            if (title.startsWith('fix:') || title.startsWith('bug:')) {
+              labels.push('bug');
+            } else if (title.startsWith('feat:') || title.startsWith('feature:')) {
+              labels.push('enhancement');
+            } else if (title.startsWith('docs:')) {
+              labels.push('documentation');
+            } else if (title.startsWith('chore:')) {
+              labels.push('chore');
+            } else if (title.startsWith('refactor:')) {
+              labels.push('refactor');
+            } else if (title.startsWith('test:')) {
+              labels.push('testing');
+            }
+
+            // Application tier labels
+            if (title.includes('frontend') || title.includes('ui') || title.includes('web')) {
+              labels.push('frontend');
+            }
+            if (title.includes('backend') || title.includes('api') || title.includes('service')) {
+              labels.push('backend');
+            }
+            if (title.includes('database') || title.includes('db') || title.includes('postgres') || title.includes('mysql')) {
+              labels.push('database');
+            }
+            
+            // Deployment labels
+            if (title.includes('kubernetes') || title.includes('k8s') || title.includes('deployment') || title.includes('manifest')) {
+              labels.push('kubernetes');
+            }
+            if (title.includes('docker') || title.includes('container') || title.includes('image')) {
+              labels.push('docker');
+            }
+            if (title.includes('ci') || title.includes('cd') || title.includes('workflow') || title.includes('github')) {
+              labels.push('ci/cd');
+            }
+
+            console.log(`PR Title: "${context.payload.pull_request.title}"`);  
+            console.log(`Labels to add: ${labels.length > 0 ? labels.join(', ') : 'none'}`);
+
+            if (labels.length > 0) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labels
+              });
+            }
+
+      - name: Label issue based on title
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = context.payload.issue.title.toLowerCase();
+            const body = (context.payload.issue.body || '').toLowerCase();
+            const labels = [];
+
+            // Issue type labels
+            if (title.includes('bug') || title.includes('error') || title.includes('broken')) {
+              labels.push('bug');
+            } else if (title.includes('feature') || title.includes('enhancement') || title.includes('request')) {
+              labels.push('enhancement');
+            } else if (title.includes('task') || title.includes('chore') || title.includes('improvement')) {
+              labels.push('task');
+            } else if (title.includes('question') || title.includes('help') || title.includes('how')) {
+              labels.push('question');
+            } else if (title.includes('docs') || title.includes('documentation')) {
+              labels.push('documentation');
+            }
+
+            // Priority labels (check both title and body)
+            if (title.includes('urgent') || title.includes('critical') || title.includes('blocker') ||
+                body.includes('- [x] critical') || body.includes('- [x] high')) {
+              labels.push('priority: high');
+            } else if (title.includes('medium') || title.includes('moderate') ||
+                       body.includes('- [x] medium')) {
+              labels.push('priority: medium');
+            } else if (title.includes('minor') || title.includes('low') ||
+                       body.includes('- [x] low')) {
+              labels.push('priority: low');
+            }
+
+            // Application tier labels
+            if (title.includes('frontend') || title.includes('ui') || title.includes('web')) {
+              labels.push('frontend');
+            }
+            if (title.includes('backend') || title.includes('api') || title.includes('service')) {
+              labels.push('backend');
+            }
+            if (title.includes('database') || title.includes('db') || title.includes('postgres') || title.includes('mysql')) {
+              labels.push('database');
+            }
+            
+            // Deployment labels
+            if (title.includes('kubernetes') || title.includes('k8s') || title.includes('deployment') || title.includes('manifest')) {
+              labels.push('kubernetes');
+            }
+            if (title.includes('docker') || title.includes('container') || title.includes('image')) {
+              labels.push('docker');
+            }
+            if (title.includes('ci') || title.includes('cd') || title.includes('workflow') || title.includes('github')) {
+              labels.push('ci/cd');
+            }
+
+            console.log(`Issue Title: "${context.payload.issue.title}"`);  
+            console.log(`Title-based labels to add: ${labels.length > 0 ? labels.join(', ') : 'none'}`);
+
+            if (labels.length > 0) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labels
+              });
+            }
