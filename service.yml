@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-review-service
+spec:
+  type: NodePort
+  selector:
+    app: book-review-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000         
+      targetPort: 3000   # container port
+      nodePort: 32000    # external port (must be in range 30000–32767)
