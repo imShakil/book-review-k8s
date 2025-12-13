@@ -1,11 +1,15 @@
 name: Build & Push Docker Images 
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       source_repo:
         description: "GitHub repo that contains the Dockerfiles (org/name)"
         required: true
+        default: "pravinmishraaws/book-review-app"
       source_ref:
         description: "Branch / tag / commit"
         required: false
@@ -13,9 +17,11 @@ on:
       docker_paths:
         description: "Folders containing Dockerfiles (space OR newline separated). example: backend frontend"
         required: true
+        default: "backend frontend"
       docker_images:
-        description: "Docker image names (same order as paths).  example: hasmo/backend:test hasmo/frontend:test"
+        description: "Docker image names (same order as paths).  example: user/book-review-backend:tag user/book-review-frontend:tag"
         required: true
+        default: "hasmo/backend:test hasmo/frontend:test"
       registry:
         description: "Docker registry"
         required: false
