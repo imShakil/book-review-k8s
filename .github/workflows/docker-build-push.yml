@@ -1,0 +1,111 @@
+name: Build & Push Docker Images 
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "GitHub repo that contains the Dockerfiles (org/name)"
+        required: true
+      source_ref:
+        description: "Branch / tag / commit"
+        required: false
+        default: "main"
+      docker_paths:
+        description: "Folders containing Dockerfiles (space OR newline separated). example: backend frontend"
+        required: true
+      docker_images:
+        description: "Docker image names (same order as paths).  example: hasmo/backend:test hasmo/frontend:test"
+        required: true
+      registry:
+        description: "Docker registry"
+        required: false
+        default: "docker.io"
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          ref: ${{ github.event.inputs.source_ref }}
+          path: repo-src
+
+      - name: Build matrix
+        id: matrix
+        shell: bash
+        env:
+          INPUT_PATHS: ${{ github.event.inputs.docker_paths }}
+          INPUT_IMAGES: ${{ github.event.inputs.docker_images }}
+          REGISTRY: ${{ github.event.inputs.registry }}
+          CLONE_DIR: repo-src
+        run: |
+          set -euo pipefail
+
+          normalize_list() {
+            local raw="$1"
+            raw="${raw//$'\r'/}"
+            printf '%s\n' "$raw" | tr -s '[:space:]' '\n' | sed '/^$/d'
+          }
+
+          mapfile -t PATHS < <(normalize_list "$INPUT_PATHS")
+          mapfile -t IMAGES < <(normalize_list "$INPUT_IMAGES")
+
+          if [ "${#PATHS[@]}" -ne "${#IMAGES[@]}" ]; then
+            echo "Paths and images count mismatch"
+            exit 1
+          fi
+
+          items=()
+          for i in "${!PATHS[@]}"; do
+            path="${PATHS[$i]%/}"
+            image="${IMAGES[$i]}"
+
+            if [ ! -d "$CLONE_DIR/$path" ]; then
+              echo "Directory not found: $CLONE_DIR/$path"
+              exit 1
+            fi
+
+            items+=( "$(jq -n --arg p "$path" --arg i "$image" '{path:$p,image:$i}')" )
+          done
+
+          matrix_json="$(printf '%s\n' "${items[@]}" | jq -s '.')"
+
+          echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$matrix_json" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          ref: ${{ github.event.inputs.source_ref }}
+          path: repo-src
+
+      - name: Login to Docker registry
+        run: |
+          echo "${{ secrets.DOCKER_PASS }}" | docker login \
+            -u "${{ secrets.DOCKER_USER }}" \
+            --password-stdin
+
+      - name: Build image
+        run: |
+          docker build \
+            -t "${{ matrix.image }}" \
+            repo-src/${{ matrix.path }}
+
+      - name: Push image
+        run: |
+          docker push "${{ matrix.image }}"
