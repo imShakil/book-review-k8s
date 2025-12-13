@@ -20,16 +20,10 @@ spec:
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: rootpassword
-            - name: MYSQL_DATABASE
-              value: bookreview
-            - name: MYSQL_USER
-              value: bookuser
-            - name: MYSQL_PASSWORD
-              value: bookpass
-          #volumeMounts:
-          #  - name: mysql-data
-          #    mountPath: /var/lib/mysql
-      #volumes:
-      #  - name: mysql-data
-      #    emptyDir: {}
-
+          volumeMounts:
+            - name: mysql-init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-init
+          configMap:
+            name: mysql-init
