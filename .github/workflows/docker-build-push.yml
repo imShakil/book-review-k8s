@@ -1,0 +1,123 @@
+name: Build & Push Docker Images
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "GitHub repo that contains the Dockerfiles (org/name)"
+        required: true
+        default: "pravinmishraaws/book-review-app"
+      source_ref:
+        description: "Branch"
+        required: false
+        default: "main"
+      docker_paths:
+        description: "Folders containing Dockerfiles (space separated), e.g., backend frontend"
+        required: true
+        default: "backend frontend"
+      docker_images:
+        description: "Docker image tags (same order as paths), e.g., backend:tag frontend:tag"
+        required: true
+        default: "book-review-backend:latest book-review-frontend:latest"
+      registry:
+        description: "Docker registry"
+        required: false
+        default: "docker.io"
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          ref: ${{ github.event.inputs.source_ref }}
+          path: repo-src
+
+      - name: Build matrix
+        id: matrix
+        shell: bash
+        env:
+          INPUT_PATHS: ${{ github.event.inputs.docker_paths }}
+          INPUT_IMAGES: ${{ github.event.inputs.docker_images }}
+          CLONE_DIR: repo-src
+        run: |
+          set -euo pipefail
+
+          normalize_list() {
+            local raw="$1"
+            raw="${raw//$'\r'/}"
+            printf '%s\n' "$raw" | tr -s '[:space:]' '\n' | sed '/^$/d'
+          }
+
+          mapfile -t PATHS < <(normalize_list "$INPUT_PATHS")
+          mapfile -t IMAGES < <(normalize_list "$INPUT_IMAGES")
+
+          if [ "${#PATHS[@]}" -ne "${#IMAGES[@]}" ]; then
+            echo "Error: paths count (${#PATHS[@]}) does not match images count (${#IMAGES[@]})"
+            exit 1
+          fi
+
+          items=()
+          for i in "${!PATHS[@]}"; do
+            path="${PATHS[$i]%/}"
+            image="${IMAGES[$i]}"
+
+            if [ ! -d "$CLONE_DIR/$path" ]; then
+              echo "Directory not found: $CLONE_DIR/$path"
+              exit 1
+            fi
+
+            # Only include image tag (no secrets)
+            items+=( "$(jq -n --arg p "$path" --arg i "$image" '{path:$p,image:$i}')" )
+          done
+
+          matrix_json="$(printf '%s\n' "${items[@]}" | jq -s '.')"
+
+          # HEREDOC MUST NOT BE INDENTED
+          echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$matrix_json" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          echo "matrix prepared: $matrix_json"
+
+  build-and-push:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          ref: ${{ github.event.inputs.source_ref }}
+          path: repo-src
+
+      - name: Login to Docker registry
+        run: |
+          echo "${{ secrets.DOCKER_PASS }}" | docker login \
+            -u "${{ secrets.DOCKER_USER }}" \
+            --password-stdin
+
+      - name: Build image
+        run: |
+          # Prepend DOCKER_USER if not already included
+          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}"
+          echo "Building image $FULL_IMAGE from repo-src/${{ matrix.path }}"
+          docker build -t "$FULL_IMAGE" "repo-src/${{ matrix.path }}"
+
+      - name: Push image
+        run: |
+          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}"
+          echo "Pushing image $FULL_IMAGE"
+          docker push "$FULL_IMAGE"
