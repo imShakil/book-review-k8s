@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: YOUR_DOCKERHUB_USERNAME/book-review-frontend:latest
+          image: bhupendrabhati/book-review-frontend:latest
           ports:
             - containerPort: 3000
           env:
