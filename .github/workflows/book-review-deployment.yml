@@ -1,0 +1,111 @@
+name: Book Review Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - staging
+      - prod
+    
+  workflow_dispatch:
+    inputs:
+        environment:
+            description: 'Deployment environment(dev, staging, prod)'
+            required: true
+            default: 'dev'
+            type: choice
+            options:
+            - dev
+            - staging
+            - prod
+        cluster_name:
+            description: 'Enter full kOPs Cluster Name(example: demo-dev.k8s.local)'
+            required: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+        
+        - name: Extract variables on push
+          if: ${{ github.event_name == 'push' }}
+          run: |
+            if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "dev" ]]; then
+                environment=dev
+                cluster_name="${{ vars.KOPS_DEV_CLUSTER_NAME }}"
+            elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+                environment=staging
+                cluster_name="${{ vars.KOPS_STAGING_CLUSTER_NAME }}"
+            elif [[ "${{ github.ref_name }}" == "prod" ]]; then
+                environment=prod
+                cluster_name="${{ vars.KOPS_PROD_CLUSTER_NAME }}"
+            else
+                echo "Error: Unsupported branch ${{ github.ref_name }}"
+                exit 1
+            fi
+
+            echo "Environment: $environment"
+            echo "Cluster Name: $cluster_name"
+            echo "ENVIRONMENT=$environment" >> $GITHUB_ENV
+            echo "CLUSTER_NAME=$cluster_name" >> $GITHUB_ENV
+        
+        - name: Extract variables on workflow dispatch
+          if: ${{ github.event_name == 'workflow_dispatch' }}
+          run: |
+            echo "Environment: ${{ inputs.environment }}"
+            echo "Cluster Name: ${{ inputs.cluster_name }}"
+            echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_ENV
+            echo "CLUSTER_NAME=${{ inputs.cluster_name }}" >> $GITHUB_ENV
+        
+        - name: Install kubectl
+          run: |
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+            if kubectl version --client --output=yaml >/dev/null 2>&1; then
+                echo "kubectl is installed and working"
+                echo "kubectl version: $(kubectl version --client --short)"
+            else
+                echo "Error: kubectl installation failed"
+                exit 1
+            fi
+
+        - name: Configure AWS CLI
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ vars.AWS_REGION }}
+
+        - name: Setup Kubernetes Cluster
+          run: |
+            mkdir -p ~/.kube
+            if ! aws s3 cp s3://${{ vars.S3_BUCKET_NAME }}/${{ env.ENVIRONMENT }}/${{ env.CLUSTER_NAME}}/kubeconfig ~/.kube/config; then
+                echo "Error: Failed to download kubeconfig from S3"
+                exit 1
+            fi
+            kubectl get nodes || exit 1
+            kubectl get pods -A || exit 1
+        
+        - name: Deploy Book Review to Kubernetes
+          run: |
+            if kubectl get namespace book-review-${{ env.ENVIRONMENT }} >/dev/null 2>&1; then
+                echo "Namespace book-review-${{ env.ENVIRONMENT }} already exists"
+            else
+                echo "Creating namespace book-review-${{ env.ENVIRONMENT }}"
+                kubectl create namespace book-review-${{ env.ENVIRONMENT }}
+            fi
+            echo "Deploying Book Review to namespace book-review-${{ env.ENVIRONMENT }}"
+            if ! kubectl apply -f k8s/ -n book-review-${{ env.ENVIRONMENT }}; then
+                echo "Error: Failed to deploy application"
+                exit 1
+            fi
+        
+        - name: Verify Deployment
+          run: |
+            kubectl rollout status deployment -n book-review-${{ env.ENVIRONMENT }} --timeout=300s
+            kubectl get pods -n book-review-${{ env.ENVIRONMENT }}
+            kubectl get services -n book-review-${{ env.ENVIRONMENT }}
+            echo "Deployment to book-review-${{ env.ENVIRONMENT }} namespace completed successfully."
