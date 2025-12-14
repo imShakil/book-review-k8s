@@ -20,6 +20,27 @@ spec:
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: rootpassword
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
           volumeMounts:
             - name: mysql-init
               mountPath: /docker-entrypoint-initdb.d

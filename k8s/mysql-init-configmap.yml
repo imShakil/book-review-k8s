@@ -4,7 +4,20 @@ metadata:
   name: mysql-init
 data:
   init.sql: |
+    -- Create database
     CREATE DATABASE IF NOT EXISTS bookreview;
-    CREATE USER IF NOT EXISTS 'bookuser'@'%' IDENTIFIED BY 'bookpass';
+    
+    -- Drop user if exists to ensure clean state
+    DROP USER IF EXISTS 'bookuser'@'%';
+    
+    -- Create user with mysql_native_password authentication
+    CREATE USER 'bookuser'@'%' IDENTIFIED WITH mysql_native_password BY 'bookpass';
+    
+    -- Grant all privileges on the bookreview database
     GRANT ALL PRIVILEGES ON bookreview.* TO 'bookuser'@'%';
+    
+    -- Flush privileges to ensure changes take effect
     FLUSH PRIVILEGES;
+    
+    -- Flush host cache to clear any connection issues
+    FLUSH HOSTS;
