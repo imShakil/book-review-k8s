@@ -81,13 +81,21 @@ jobs:
 
         - name: Setup Kubernetes Cluster
           run: |
+            if [ -d ~/.kube ]; then
+                echo "Removing existing kubeconfig"
+                rm -rf ~/.kube
+            fi
+            echo "Downloading kubeconfig from S3"
             mkdir -p ~/.kube
             if ! aws s3 cp s3://${{ vars.S3_BUCKET_NAME }}/${{ env.ENVIRONMENT }}/${{ env.CLUSTER_NAME}}/kubeconfig ~/.kube/config; then
                 echo "Error: Failed to download kubeconfig from S3"
                 exit 1
             fi
+            echo "Kubeconfig downloaded successfully"
+            echo "Verifying cluster access"
             kubectl get nodes || exit 1
             kubectl get pods -A || exit 1
+            echo "Cluster access verified successfully"
         
         - name: Deploy Book Review to Kubernetes
           run: |
