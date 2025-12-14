@@ -14,15 +14,21 @@ spec:
     spec:
       initContainers:
         - name: wait-for-mysql
-          image: mysql:8.0
+          image: busybox:1.36
           command:
             - sh
             - -c
             - |
-              until mysql -h mysql -u root -prootpassword -e "SELECT 1"; do
-                echo "Waiting for MySQL..."
-                sleep 5
+              echo "Waiting for mysql DNS..."
+              until nslookup mysql; do
+                sleep 2
               done
+
+              echo "Waiting for MySQL port 3306..."
+              until nc -z mysql 3306; do
+                sleep 2
+              done
+
       containers:
         - name: backend
           image: bhupendrabhati/book-review-backend:latest
