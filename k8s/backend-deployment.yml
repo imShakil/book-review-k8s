@@ -12,6 +12,17 @@ spec:
       labels:
         app: backend
     spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: mysql:8.0
+          command:
+            - sh
+            - -c
+            - |
+              until mysql -h mysql -u root -prootpassword -e "SELECT 1"; do
+                echo "Waiting for MySQL..."
+                sleep 5
+              done
       containers:
         - name: backend
           image: bhupendrabhati/book-review-backend:latest
