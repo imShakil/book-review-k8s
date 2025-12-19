@@ -59,6 +59,14 @@ jobs:
             echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_ENV
             echo "CLUSTER_NAME=${{ inputs.cluster_name }}" >> $GITHUB_ENV
         
+        - name: Install kOps
+          run: |
+            echo "Installing kOps..."
+            KOPS_VERSION=$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)
+            curl -Lo kops "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64"
+            sudo install -o root -g root -m 0755 kops /usr/local/bin/kops
+            echo "kOps version: $(kops version --short)"
+
         - name: Install kubectl
           run: |
             curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -81,20 +89,14 @@ jobs:
 
         - name: Setup Kubernetes Cluster
           run: |
-            if [ -d ~/.kube ]; then
-                echo "Removing existing kubeconfig"
-                rm -rf ~/.kube
-            fi
-            echo "Downloading kubeconfig from S3"
-            mkdir -p ~/.kube
-            if ! aws s3 cp s3://${{ vars.S3_BUCKET_NAME }}/${{ env.ENVIRONMENT }}/${{ env.CLUSTER_NAME}}/kubeconfig ~/.kube/config; then
-                echo "Error: Failed to download kubeconfig from S3"
-                exit 1
-            fi
-            echo "Kubeconfig downloaded successfully"
+            echo "Generating kubeconfig using kOps..."
+            KOPS_STATE_STORE="s3://${{ vars.S3_BUCKET_NAME }}/${{ env.ENVIRONMENT }}/clusters/"
+            kops export kubeconfig --name "${{ env.CLUSTER_NAME }}" --state "$KOPS_STATE_STORE" --admin
+            echo "Kubeconfig generated successfully"
+
             echo "Verifying cluster access"
             kubectl get nodes || exit 1
-            kubectl get pods -A || exit 1
+            kubectl get namespaces || exit 1
             echo "Cluster access verified successfully"
         
         - name: Deploy Book Review to Kubernetes
