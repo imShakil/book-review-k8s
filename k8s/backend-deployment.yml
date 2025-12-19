@@ -12,23 +12,6 @@ spec:
       labels:
         app: backend
     spec:
-      initContainers:
-        - name: wait-for-mysql
-          image: busybox:1.36
-          command:
-            - sh
-            - -c
-            - |
-              echo "Waiting for mysql DNS..."
-              until nslookup mysql; do
-                sleep 2
-              done
-
-              echo "Waiting for MySQL port 3306..."
-              until nc -z mysql 3306; do
-                sleep 2
-              done
-
       containers:
         - name: backend
           image: bhupendrabhati/book-review-backend:latest
@@ -37,9 +20,50 @@ spec:
           env:
             - name: DB_HOST
               value: mysql
+            - name: DB_DIALECT
+              value: mysql
+            - name: DB_PORT
+              value: "3306"
             - name: DB_USER
-              value: bookuser
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
             - name: DB_PASSWORD
-              value: bookpass
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
             - name: DB_NAME
-              value: bookreview
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_DATABASE
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: JWT_SECRET
+            - name: ALLOWED_ORIGINS
+              value: "*"
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5

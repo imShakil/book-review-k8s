@@ -18,5 +18,26 @@ spec:
           ports:
             - containerPort: 3000
           env:
+            # Use a relative path so the browser sends API requests to the same host (the Ingress)
             - name: NEXT_PUBLIC_API_URL
-              value: http://backend:3001
+              value: /api
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
