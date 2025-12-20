@@ -54,11 +54,27 @@ jobs:
           echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_ENV
           echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
 
-      - name: Extract variables on workflow dispatch
+      - name: Extract workflow_dispatch inputs safely
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_CLUSTER_NAME: ${{ inputs.cluster_name }}
         run: |
-          echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_ENV
-          echo "CLUSTER_NAME=${{ inputs.cluster_name }}" >> $GITHUB_ENV
+          # Only assign to GITHUB_ENV from controlled env variables
+          echo "ENVIRONMENT=$INPUT_ENVIRONMENT" >> $GITHUB_ENV
+          echo "CLUSTER_NAME=$INPUT_CLUSTER_NAME" >> $GITHUB_ENV
+
+      - name: Validate environment
+        run: |
+          if [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "staging" && "$ENVIRONMENT" != "prod" ]]; then
+            echo "Invalid environment: $ENVIRONMENT"
+            exit 1
+          fi
+
+          if [[ "$CLUSTER_NAME" == "" ]]; then
+            echo "Cluster name is required"
+            exit 1
+          fi
 
       # -------------------------
       # Tooling
@@ -88,8 +104,8 @@ jobs:
       # -------------------------
       - name: Setup Kubernetes Cluster
         run: |
-          KOPS_STATE_STORE="s3://${{ vars.S3_BUCKET_NAME }}/${{ env.ENVIRONMENT }}/clusters/"
-          kops export kubeconfig --name "${{ env.CLUSTER_NAME }}" --state "$KOPS_STATE_STORE" --admin
+          KOPS_STATE_STORE="s3://${{ vars.S3_BUCKET_NAME }}/${ENVIRONMENT}/clusters/"
+          kops export kubeconfig --name "${CLUSTER_NAME}" --state "$KOPS_STATE_STORE" --admin
           kubectl get nodes
 
       # -------------------------
@@ -97,7 +113,7 @@ jobs:
       # -------------------------
       - name: Create Namespace
         run: |
-          NAMESPACE="book-review-${{ env.ENVIRONMENT }}"
+          NAMESPACE="book-review-${ENVIRONMENT}"
           kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
           echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
 
