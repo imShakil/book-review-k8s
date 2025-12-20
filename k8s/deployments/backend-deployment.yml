@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: imshakil/book-review-backend:latest
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              value: mysql
+            - name: DB_DIALECT
+              value: "mysql"
+            # - name: DB_USER
+            #   value: "bookuser"
+            # - name: DB_PASS
+            #   value: "bookpass"
+            # - name: DB_NAME
+            #   value: "bookreview"
+            # - name: JWT_SECRET
+            #   value: "jwt-secret-key"
+            # - name: ALLOWED_ORIGINS
+            #   value: "http://a1b31143721be4e8cbe456ded1ba604c-757999629.ap-southeast-1.elb.amazonaws.com,http://localhost:3000"
+            - name: DB_USER
+              valueFrom:
+               configMapKeyRef:
+                  key: MYSQL_USER
+                  name: app-configs
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: MYSQL_DATABASE
+                  name: app-configs
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: ALLOWED_ORIGINS
+                  name: app-configs
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
