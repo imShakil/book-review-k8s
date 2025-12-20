@@ -2,6 +2,11 @@ name: Build & Push Docker Images
 
 on:
   push:
+    branches:
+      - main
+      - dev
+      - staging
+      - prod
     tags:
       - 'v*'
   workflow_dispatch:
@@ -11,7 +16,7 @@ on:
         required: true
         default: "pravinmishraaws/book-review-app"
       source_ref:
-        description: "Branch"
+        description: "Branch or tag"
         required: false
         default: "main"
       docker_paths:
@@ -19,9 +24,9 @@ on:
         required: true
         default: "backend frontend"
       docker_images:
-        description: "Docker image tags (same order as paths), e.g., backend:tag frontend:tag"
+        description: "Docker image names (same order as paths), e.g., backend frontend"
         required: true
-        default: "book-review-backend:latest book-review-frontend:latest"
+        default: "book-review-backend book-review-frontend"
       registry:
         description: "Docker registry"
         required: false
@@ -32,7 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
-
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v4
@@ -65,23 +69,22 @@ jobs:
             exit 1
           fi
 
+          # Determine tag: use git ref
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]] || [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            IMAGE_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            IMAGE_TAG="${GITHUB_REF#refs/heads/}"
+          fi
+
           items=()
           for i in "${!PATHS[@]}"; do
             path="${PATHS[$i]%/}"
             image="${IMAGES[$i]}"
-
-            if [ ! -d "$CLONE_DIR/$path" ]; then
-              echo "Directory not found: $CLONE_DIR/$path"
-              exit 1
-            fi
-
-            # Only include image tag (no secrets)
-            items+=( "$(jq -n --arg p "$path" --arg i "$image" '{path:$p,image:$i}')" )
+            items+=( "$(jq -n --arg p "$path" --arg i "$image" --arg t "$IMAGE_TAG" '{path:$p,image:$i,tag:$t}')" )
           done
 
           matrix_json="$(printf '%s\n' "${items[@]}" | jq -s '.')"
 
-          # HEREDOC MUST NOT BE INDENTED
           echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
           echo "$matrix_json" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
@@ -111,13 +114,12 @@ jobs:
 
       - name: Build image
         run: |
-          # Prepend DOCKER_USER if not already included
-          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}"
+          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}:${{ matrix.tag }}"
           echo "Building image $FULL_IMAGE from repo-src/${{ matrix.path }}"
           docker build -t "$FULL_IMAGE" "repo-src/${{ matrix.path }}"
 
       - name: Push image
         run: |
-          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}"
+          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}:${{ matrix.tag }}"
           echo "Pushing image $FULL_IMAGE"
           docker push "$FULL_IMAGE"
