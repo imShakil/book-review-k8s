@@ -190,6 +190,9 @@ jobs:
 
       - name: Apply configs & secrets
         run: |
+          cat k8s/deployments/backend-deployment.yml
+          cat k8s/deployments/frontend-deployment.yml
+
           kubectl apply -f k8s/configs -n ${NAMESPACE}
 
       # -------------------------
