@@ -12,9 +12,10 @@ spec:
       labels:
         app: frontend
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: frontend
-          image: imshakil/book-review-frontend:latest
+          image: ${FRONTEND_DOCKER_IAMGE}
           ports:
             - containerPort: 3000
               protocol: TCP
@@ -28,9 +29,11 @@ spec:
             requests:
               cpu: "250m"
               memory: "256Mi"
+              ephemeral-storage: "512Mi"
             limits:
               cpu: "500m"
               memory: "512Mi"
+              ephemeral-storage: "1Gi"
           livenessProbe:
             httpGet:
               path: /
