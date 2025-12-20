@@ -15,7 +15,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: frontend
-          image: ${FRONTEND_DOCKER_IAMGE}
+          image: ${FRONTEND_DOCKER_IMAGE}
           ports:
             - containerPort: 3000
               protocol: TCP
