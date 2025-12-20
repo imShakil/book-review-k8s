@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-config
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS ${MYSQL_DB};
+    CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+    GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'%';
+    FLUSH PRIVILEGES;

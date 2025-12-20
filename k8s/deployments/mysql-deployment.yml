@@ -1,15 +1,3 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mysql-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,12 +19,18 @@ spec:
           image: mysql:8.0
           ports:
             - containerPort: 3306
-          envFrom:
-            - secretRef:
-                name: mysql-secret
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD  
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_ROOT_PASSWORD
           volumeMounts:
-            - name: mysql-storage
-              mountPath: /var/lib/mysql
+            # - name: mysql-storage
+            #   mountPath: /var/lib/mysql
+            - name: mysql-init-config
+              mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               memory: "512Mi"
@@ -47,37 +41,38 @@ spec:
           livenessProbe:
             exec:
               command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-                - -p$(MYSQL_ROOT_PASSWORD)
+                - /bin/sh
+                - -c
+                - "mysqladmin ping -h localhost -p${MYSQL_ROOT_PASSWORD}"
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
             exec:
               command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-                - -p$(MYSQL_ROOT_PASSWORD)
+                - /bin/sh
+                - -c
+                - "mysqladmin ping -h localhost -p${MYSQL_ROOT_PASSWORD}"
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 1
       volumes:
-        - name: mysql-storage
-          persistentVolumeClaim:
-            claimName: mysql-pvc
+        # - name: mysql-storage
+        #   persistentVolumeClaim:
+        #     claimName: mysql-pvc
+        - name: mysql-init-config
+          configMap:
+            name: mysql-init-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: mysql
 spec:
+  type: ClusterIP
   selector:
     app: mysql
   ports:
     - port: 3306
       targetPort: 3306
+      protocol: TCP

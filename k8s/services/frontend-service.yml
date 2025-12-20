@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: frontend
 spec:
   selector:
-    app: backend
+    app: frontend
   ports:
-    - port: 3001
-      targetPort: 3001
+    - port: 80
+      targetPort: 3000
   type: LoadBalancer

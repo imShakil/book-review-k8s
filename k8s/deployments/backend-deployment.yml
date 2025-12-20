@@ -14,38 +14,50 @@ spec:
     spec:
       containers:
         - name: backend
-          image: bhupendrabhati/book-review-backend:latest
+          image: imshakil/book-review-backend:latest
           ports:
             - containerPort: 3001
+              protocol: TCP
           env:
             - name: DB_HOST
               value: mysql
             - name: DB_DIALECT
-              value: mysql
-            - name: DB_PORT
-              value: "3306"
+              value: "mysql"
+            # - name: DB_USER
+            #   value: "bookuser"
+            # - name: DB_PASS
+            #   value: "bookpass"
+            # - name: DB_NAME
+            #   value: "bookreview"
+            # - name: JWT_SECRET
+            #   value: "jwt-secret-key"
+            # - name: ALLOWED_ORIGINS
+            #   value: "http://a1b31143721be4e8cbe456ded1ba604c-757999629.ap-southeast-1.elb.amazonaws.com,http://localhost:3000"
             - name: DB_USER
               valueFrom:
-                secretKeyRef:
-                  name: mysql-secret
+               configMapKeyRef:
                   key: MYSQL_USER
-            - name: DB_PASSWORD
+                  name: app-configs
+            - name: DB_PASS
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
+                  name: app-secrets
                   key: MYSQL_PASSWORD
             - name: DB_NAME
               valueFrom:
-                secretKeyRef:
-                  name: mysql-secret
+                configMapKeyRef:
                   key: MYSQL_DATABASE
+                  name: app-configs
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
+                  name: app-secrets
                   key: JWT_SECRET
             - name: ALLOWED_ORIGINS
-              value: "*"
+              valueFrom:
+                configMapKeyRef:
+                  key: ALLOWED_ORIGINS
+                  name: app-configs
 
           resources:
             requests:

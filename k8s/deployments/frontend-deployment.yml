@@ -14,20 +14,23 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: bhupendrabhati/book-review-frontend:latest
+          image: imshakil/book-review-frontend:latest
           ports:
             - containerPort: 3000
+              protocol: TCP
           env:
-            # Use a relative path so the browser sends API requests to the same host (the Ingress)
             - name: NEXT_PUBLIC_API_URL
-              value: /api
+              valueFrom:
+                configMapKeyRef:
+                  key: NEXT_PUBLIC_API_URL
+                  name: app-configs
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
               cpu: "250m"
               memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           livenessProbe:
             httpGet:
               path: /
