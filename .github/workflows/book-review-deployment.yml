@@ -168,8 +168,8 @@ jobs:
           FRONTEND_LB=$(kubectl get svc frontend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           BACKEND_LB=$(kubectl get svc backend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-          echo "ALLOWED_ORIGINS=${PROTOCOL}://${FRONTEND_LB}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_API_URL=${PROTOCOL}://${BACKEND_LB}" >> $GITHUB_ENV
+          echo "ALLOWED_ORIGINS=http://${FRONTEND_LB}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_API_URL=http://${BACKEND_LB}" >> $GITHUB_ENV
 
       # -------------------------
       # Configs & Secrets
