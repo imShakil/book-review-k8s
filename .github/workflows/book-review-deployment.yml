@@ -81,12 +81,12 @@ jobs:
       # -------------------------
       - name: Install kOps and kubectl
         run: |
-          KOPS_VERSION=$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)
-          curl --proto =${PROTOCOL} -Lo kops "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64"
+          KOPS_VERSION=$(curl --proto =${PROTOCOL} -L -s ${PROTOCOL}://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)
+          curl --proto =${PROTOCOL} -Lo kops "${PROTOCOL}://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64"
           chmod +x kops && sudo mv kops /usr/local/bin/
           
-          KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-          curl --proto =${PROTOCOL} -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          KUBECTL_VERSION=$(curl --proto =${PROTOCOL} -L -s ${PROTOCOL}://dl.k8s.io/release/stable.txt)
+          curl --proto =${PROTOCOL} -LO "${PROTOCOL}://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
           chmod +x kubectl && sudo mv kubectl /usr/local/bin/
           echo "✅ Tools installed"
         env:
