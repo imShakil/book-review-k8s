@@ -140,23 +140,19 @@ jobs:
       # Runtime Environment Vars
       # -------------------------
       - name: Extract environment variables
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
         run: |
-          set -euo pipefail
-          # Mask sensitive secrets
-          echo "::add-mask::${{ secrets.MYSQL_USER }}"
-          echo "::add-mask::${{ secrets.MYSQL_PASSWORD }}"
-          echo "::add-mask::${{ secrets.MYSQL_ROOT_PASSWORD }}"
-
-          echo "MYSQL_USER=${{ secrets.MYSQL_USER }}" >> $GITHUB_ENV
-          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> $GITHUB_ENV
-          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> $GITHUB_ENV
+          echo "MYSQL_USER=${MYSQL_USER}" >> $GITHUB_ENV
+          echo "MYSQL_PASSWORD=${MYSQL_PASSWORD}" >> $GITHUB_ENV
+          echo "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" >> $GITHUB_ENV
           echo "MYSQL_DB=${{ vars.MYSQL_DATABASE }}" >> $GITHUB_ENV
           echo "MYSQL_HOST=${{ vars.MYSQL_HOST }}" >> $GITHUB_ENV
           echo "MYSQL_PORT=${{ vars.MYSQL_PORT }}" >> $GITHUB_ENV
-          # Generate JWT secret
-          JWT_SECRET=$(openssl rand -hex 32)
-          echo "::add-mask::$JWT_SECRET"
-          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
+          echo "JWT_SECRET=${JWT_SECRET}" >> $GITHUB_ENV
           echo "PROTOCOL="http" >> $GITHUB_ENV
 
           FRONTEND_LB=$(kubectl get svc frontend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
