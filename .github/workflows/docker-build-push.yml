@@ -108,18 +108,25 @@ jobs:
 
       - name: Login to Docker registry
         run: |
-          echo "${{ secrets.DOCKER_PASS }}" | docker login \
-            -u "${{ secrets.DOCKER_USER }}" \
+          echo "${DOCKER_PASS}" | docker login \
+            -u "${DOCKER_USER}" \
             --password-stdin
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
       - name: Build image
         run: |
-          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}:${{ matrix.tag }}"
+          FULL_IMAGE="${DOCKER_USER}/${{ matrix.image }}:${{ matrix.tag }}"
           echo "Building image $FULL_IMAGE from repo-src/${{ matrix.path }}"
           docker build -t "$FULL_IMAGE" "repo-src/${{ matrix.path }}"
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
 
       - name: Push image
         run: |
-          FULL_IMAGE="${{ secrets.DOCKER_USER }}/${{ matrix.image }}:${{ matrix.tag }}"
+          FULL_IMAGE="${DOCKER_USER}/${{ matrix.image }}:${{ matrix.tag }}"
           echo "Pushing image $FULL_IMAGE"
           docker push "$FULL_IMAGE"
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}

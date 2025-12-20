@@ -82,13 +82,15 @@ jobs:
       - name: Install kOps and kubectl
         run: |
           KOPS_VERSION=$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)
-          curl -Lo kops "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64"
+          curl --proto =${PROTOCOL} -Lo kops "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-linux-amd64"
           chmod +x kops && sudo mv kops /usr/local/bin/
           
           KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          curl --proto =${PROTOCOL} -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
           chmod +x kubectl && sudo mv kubectl /usr/local/bin/
           echo "✅ Tools installed"
+        env:
+          PROTOCOL: "https"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
