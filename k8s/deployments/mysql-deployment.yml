@@ -3,12 +3,11 @@ kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
 spec:
-  storageClassName: manual
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 2Gi
+      storage: 5Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
