@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,6 +26,7 @@ spec:
       labels:
         app: mysql
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: mysql
           image: mysql:8.0
@@ -27,17 +40,19 @@ spec:
                   name: app-secrets
                   key: MYSQL_ROOT_PASSWORD
           volumeMounts:
-            # - name: mysql-storage
-            #   mountPath: /var/lib/mysql
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
             - name: mysql-init-config
               mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               memory: "512Mi"
               cpu: "500m"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "1Gi"
               cpu: "1000m"
+              ephemeral-storage: "2Gi"
           livenessProbe:
             exec:
               command:
@@ -57,9 +72,9 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 1
       volumes:
-        # - name: mysql-storage
-        #   persistentVolumeClaim:
-        #     claimName: mysql-pvc
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
         - name: mysql-init-config
           configMap:
             name: mysql-init-config
