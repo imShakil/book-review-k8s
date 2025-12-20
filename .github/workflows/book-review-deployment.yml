@@ -145,6 +145,7 @@ jobs:
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }} 
         run: |
           echo "MYSQL_USER=${MYSQL_USER}" >> $GITHUB_ENV
           echo "MYSQL_PASSWORD=${MYSQL_PASSWORD}" >> $GITHUB_ENV
@@ -154,6 +155,15 @@ jobs:
           echo "MYSQL_PORT=${{ vars.MYSQL_PORT }}" >> $GITHUB_ENV
           echo "JWT_SECRET=${JWT_SECRET}" >> $GITHUB_ENV
           echo "PROTOCOL=http" >> $GITHUB_ENV
+
+          if $ENVIRONMENT == "dev"; then
+            TAG=main
+          else
+            TAG=$ENVIRONMENT
+          fi
+
+          echo "FRONTEND_DOCKER_IMAGE=${DOCKER_USERNAME}/book-review-frontend:${TAG}" >> $GITHUB_ENV
+          echo "BACKEND_DOCKER_IMAGE=${DOCKER_USERNAME}/book-review-backend:${TAG}" >> $GITHUB_ENV
 
           FRONTEND_LB=$(kubectl get svc frontend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           BACKEND_LB=$(kubectl get svc backend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
@@ -169,10 +179,14 @@ jobs:
           envsubst < k8s/configs/app-configs.yml > /tmp/app-configs.yml
           envsubst < k8s/configs/app-secrets.yml > /tmp/app-secrets.yml
           envsubst < k8s/configs/mysql-init.yml > /tmp/mysql-init.yml
+          envsubst < k8s/deployments/backend-deployment.yml > /tmp/backend-deployment.yml
+          envsubst < k8s/deployments/frontend-deployment.yml > /tmp/frontend-deployment.yml
 
           mv /tmp/app-configs.yml k8s/configs/app-configs.yml
           mv /tmp/app-secrets.yml k8s/configs/app-secrets.yml
           mv /tmp/mysql-init.yml k8s/configs/mysql-init.yml
+          mv /tmp/backend-deployment.yml k8s/deployments/backend-deployment.yml
+          mv /tmp/frontend-deployment.yml k8s/deployments/frontend-deployment.yml
 
       - name: Apply configs & secrets
         run: |
