@@ -156,10 +156,10 @@ jobs:
           echo "JWT_SECRET=${JWT_SECRET}" >> $GITHUB_ENV
           echo "PROTOCOL=http" >> $GITHUB_ENV
 
-          if $ENVIRONMENT == "dev"; then
+          if [[ "$ENVIRONMENT" == "dev" ]]; then
             TAG=main
           else
-            TAG=$ENVIRONMENT
+            TAG="$ENVIRONMENT"
           fi
 
           echo "FRONTEND_DOCKER_IMAGE=${DOCKER_USERNAME}/book-review-frontend:${TAG}" >> $GITHUB_ENV
