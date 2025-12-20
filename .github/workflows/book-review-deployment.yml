@@ -153,7 +153,7 @@ jobs:
           echo "MYSQL_HOST=${{ vars.MYSQL_HOST }}" >> $GITHUB_ENV
           echo "MYSQL_PORT=${{ vars.MYSQL_PORT }}" >> $GITHUB_ENV
           echo "JWT_SECRET=${JWT_SECRET}" >> $GITHUB_ENV
-          echo "PROTOCOL="http" >> $GITHUB_ENV
+          echo "PROTOCOL=http" >> $GITHUB_ENV
 
           FRONTEND_LB=$(kubectl get svc frontend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           BACKEND_LB=$(kubectl get svc backend -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
