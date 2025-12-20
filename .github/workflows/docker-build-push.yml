@@ -41,16 +41,16 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.inputs.source_repo }}
-          ref: ${{ github.event.inputs.source_ref }}
+          repository: ${{ github.event.inputs.source_repo || 'pravinmishraaws/book-review-app' }}
+          ref: ${{ github.event.inputs.source_ref || 'main' }}
           path: repo-src
 
       - name: Build matrix
         id: matrix
         shell: bash
         env:
-          INPUT_PATHS: ${{ github.event.inputs.docker_paths }}
-          INPUT_IMAGES: ${{ github.event.inputs.docker_images }}
+          INPUT_PATHS: ${{ github.event.inputs.docker_paths || 'backend frontend' }}
+          INPUT_IMAGES: ${{ github.event.inputs.docker_images || 'book-review-backend book-review-frontend' }}
           CLONE_DIR: repo-src
         run: |
           set -euo pipefail
@@ -102,8 +102,8 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.inputs.source_repo }}
-          ref: ${{ github.event.inputs.source_ref }}
+          repository: ${{ github.event.inputs.source_repo || 'pravinmishraaws/book-review-app' }}
+          ref: ${{ github.event.inputs.source_ref || 'main' }}
           path: repo-src
 
       - name: Login to Docker registry
