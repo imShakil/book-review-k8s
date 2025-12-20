@@ -15,7 +15,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: backend
-          image: ${BACKEND_DOCKER_IAMGE}
+          image: ${BACKEND_DOCKER_IMAGE}
           ports:
             - containerPort: 3001
               protocol: TCP
